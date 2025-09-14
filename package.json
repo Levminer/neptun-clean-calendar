@@ -1,0 +1,17 @@
+{
+  "name": "neptun-clean-calendar",
+  "version": "2.0.0",
+  "scripts": {
+    "dev": "tsx watch ./main.ts",
+    "build": "tsc"
+  },
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "@hono/node-server": "^1.19.2",
+    "@types/node": "^24.4.0",
+    "hono": "^4.9.7",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2"
+  }
+}

@@ -1,4 +1,7 @@
-function filterIcs(icsText: string): Uint8Array {
+import { serve } from "@hono/node-server"
+import { Hono } from "hono"
+
+function filterIcs(icsText: string): string {
 	// Events are separated by new lines
 	const lines = icsText.split(/\r?\n/)
 	const filteredLines: string[] = []
@@ -45,29 +48,30 @@ function filterIcs(icsText: string): Uint8Array {
 	console.log(`Filtered calendar: ${removedEvents} events removed out of ${totalEvents} total events`)
 
 	const filteredText = filteredLines.join("\n")
-	const body = new TextEncoder().encode(filteredText)
 
-	return body
+	return filteredText
 }
 
-Deno.serve(async (req) => {
-	const { searchParams } = new URL(req.url)
-	const link = searchParams.get("link")
+const app = new Hono()
+
+app.get("/", async (c) => {
+	const link = c.req.query("link")
 
 	if (!link) {
-		return new Response("Missing required query parameter: link=<ics-url>", { status: 400 })
+		return c.text("Missing required query parameter: link=<ics-url>", 400)
 	}
 
 	try {
 		const upstream = await fetch(link)
 		if (!upstream.ok) {
-			return new Response(`Failed to fetch upstream ICS: ${upstream.status} ${upstream.statusText}`, { status: 502 })
+			return c.text(`Failed to fetch upstream ICS: ${upstream.status} ${upstream.statusText}`, 502)
 		}
 
 		const text = await upstream.text()
-		const body = filterIcs(text)
+		const filteredText = filterIcs(text)
 
-		return new Response(body, {
+		return new Response(filteredText, {
+			status: 200,
 			headers: {
 				"Content-Type": "text/calendar; charset=utf-8",
 				"Content-Disposition": 'inline; filename="filtered.ics"',
@@ -76,6 +80,14 @@ Deno.serve(async (req) => {
 		})
 	} catch (err) {
 		console.error(err)
-		return new Response("Internal error processing ICS.", { status: 500 })
+		return c.text("Internal error processing ICS.", 500)
 	}
+})
+
+const port = process.env.PORT ? parseInt(process.env.PORT) : 8000
+console.log(`Server is running on port ${port}`)
+
+serve({
+	fetch: app.fetch,
+	port: 8000,
 })
